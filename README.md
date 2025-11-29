@@ -1,10 +1,12 @@
 # TumorBoard v0
-
 An LLM-powered cancer variant actionability assessment tool with a built-in validation framework.
+
+**TL;DR**:   
+Molecular tumor boards manually review cancer variants to assign clinical actionability—a time-consuming process requiring expert panels. This research tool automates that workflow by fetching variant evidence from genomic databases (CIViC, ClinVar, COSMIC) and using LLMs to assign AMP/ASCO/CAP tier classifications, mimicking expert judgment. Includes a validation framework to benchmark LLM accuracy against gold-standard classifications. This is a research prototype exploring whether LLMs can approximate clinical decision-making; not for actual clinical use.
 
 ## Overview
 
-TumorBoard combines clinical evidence from multiple genomic databases (CIViC, ClinVar, COSMIC). It then uses large language models to emulate an expert application of the **AMP/ASCO/CAP 4-tier classification system**.
+TumorBoard combines clinical evidence from multiple genomic databases (CIViC, ClinVar, COSMIC). It then uses large language models to approximate expert application of the **AMP/ASCO/CAP 4-tier classification system**.
 
 ### Key Features
 
@@ -21,209 +23,116 @@ Molecular tumor boards face significant challenges:
 
 1. **Resource Intensive**: Expert panels must manually review variants and apply 
    classification frameworks - a time-consuming process requiring coordinated expertise.
-
 2. **Coverage Gaps**: Curated databases like CIViC don't cover every variant-tumor 
    combination, especially rare or novel variants.
-
 3. **Evidence Fragmentation**: Relevant evidence is scattered across multiple 
    databases (CIViC, ClinVar, COSMIC), requiring manual synthesis.
-
 4. **Rapid Evolution**: New trials and approvals constantly change variant 
    actionability.
 
-## What This Tool Explores
+## Disclaimer
 
-This is a **research prototype** investigating whether LLMs can aggregate evidence 
-and approximate expert application of classification frameworks like AMP/ASCO/CAP.
-
-**Important Limitations:**
-- LLMs may hallucinate or misinterpret evidence (~17% citation error rate in 
-  similar systems)
+**Limitations:**
+- LLMs may hallucinate or misinterpret evidence 
 - Pattern matching ≠ expert clinical judgment  
 - Requires validation against gold standards (hence the built-in framework)
+- Evidence quality: Depends on database coverage
+- Novel variants: Limited data for rare variants
+- Context windows: Very long evidence may be truncated
 
 **This tool is for research purposes only.** Clinical decisions should always 
 be made by qualified healthcare professionals.
 
-## Installation
+## Getting Started
 
+**Installation:**
 ```bash
-# Clone the repository
 git clone <repository-url>
 cd tumor_board
-
-# Install dependencies (requires Python 3.11+)
 pip install -e .
-
-# For development
-pip install -e ".[dev]"
 ```
 
-## Quick Start
-
-### 1. Set up API keys
+**Setup API Key** (choose one):
+LLMs are cloud-based AI services that need authentication.
 
 ```bash
-# For OpenAI
+# OpenAI (default, uses gpt-4o-mini)
 export OPENAI_API_KEY="your-key-here"
 
-# For Anthropic Claude
+# Or Anthropic (use with --model claude-3-sonnet-20240229)
 export ANTHROPIC_API_KEY="your-key-here"
 ```
 
-### 2. Assess a single variant
+Alternatively, you can use env.example - rename it to .env, and specify your keys there.
+
+**Basic Usage:**
 
 ```bash
+# Single variant
 tumorboard assess BRAF V600E --tumor "Melanoma"
-```
 
-Output:
-```
-================================================================================
-VARIANT ACTIONABILITY ASSESSMENT REPORT
-================================================================================
-
-Variant: BRAF V600E
-Tumor Type: Melanoma
-
-Tier: Tier I
-Confidence: 95.0%
-Evidence Strength: Strong
-
---------------------------------------------------------------------------------
-SUMMARY
---------------------------------------------------------------------------------
-BRAF V600E is a well-established actionable mutation in melanoma with
-FDA-approved targeted therapies including vemurafenib, dabrafenib, and
-encorafenib.
-
-...
-```
-
-### 3. Batch processing
-
-```bash
+# Batch processing
 tumorboard batch benchmarks/sample_batch.json --output results.json
-```
 
-### 4. Run validation
-
-```bash
+# Validate performance
 tumorboard validate benchmarks/gold_standard.json
 ```
 
-## CLI Commands
+## CLI Reference
 
-### `assess` - Single Variant Assessment
-
-Assess the clinical actionability of a single variant.
+### `assess` - Single Variant
+Specify a single variant, then run this command to fetch variant evidence and use the LLM to assign an AMP/ASCO/CAP tier classification.
 
 ```bash
 tumorboard assess <GENE> <VARIANT> --tumor <TUMOR_TYPE> [OPTIONS]
 
-Arguments:
-  GENE        Gene symbol (e.g., BRAF)
-  VARIANT     Variant notation (e.g., V600E)
-
 Options:
-  -t, --tumor TEXT       Tumor type (required)
-  -m, --model TEXT       LLM model [default: gpt-4o-mini]
-  -o, --output PATH      Save results to JSON file
-  -v, --verbose          Enable debug logging
+  -m, --model TEXT    LLM model [default: gpt-4o-mini]
+  -o, --output PATH   Save to JSON file
+  -v, --verbose       Debug logging
 ```
 
-**Examples:**
+Example output:
+```
+Variant: BRAF V600E | Tumor: Melanoma
+Tier: Tier I | Confidence: 95.0%
 
-```bash
-# Basic assessment
-tumorboard assess BRAF V600E --tumor "Melanoma"
-
-# Use Claude instead of GPT
-tumorboard assess EGFR L858R --tumor "Lung Cancer" --model claude-3-sonnet-20240229
-
-# Save to file
-tumorboard assess KRAS G12C --tumor "NSCLC" --output assessment.json
+BRAF V600E is a well-established actionable mutation in melanoma with
+FDA-approved targeted therapies including vemurafenib, dabrafenib...
 ```
 
-### `batch` - Batch Processing
-
-Process multiple variants from a JSON file.
+### `batch` - Multiple Variants
+Specify a JSON file with variant details (gene, variant, tumor type), then run this command to process them concurrently and generate batch results.
 
 ```bash
 tumorboard batch <INPUT_FILE> [OPTIONS]
 
-Arguments:
-  INPUT_FILE    JSON file with variant list
-
 Options:
   -o, --output PATH        Output file [default: results.json]
   -m, --model TEXT         LLM model [default: gpt-4o-mini]
-  -c, --max-concurrent N   Max concurrent requests [default: 5]
-  -v, --verbose            Enable debug logging
+  -c, --max-concurrent N   Concurrent requests [default: 5]
 ```
 
-**Input Format:**
+Input format: `[{"gene": "BRAF", "variant": "V600E", "tumor_type": "Melanoma"}, ...]`
 
-```json
-[
-  {
-    "gene": "BRAF",
-    "variant": "V600E",
-    "tumor_type": "Melanoma"
-  },
-  {
-    "gene": "EGFR",
-    "variant": "L858R",
-    "tumor_type": "Lung Adenocarcinoma"
-  }
-]
-```
+### `validate` - Test Accuracy
+Specify a gold standard dataset with known correct tier classifications, then run this command to benchmark the LLM's performance and identify where it agrees or disagrees with expert consensus—this is critical for evaluating reliability before using the tool for research.
 
-**Example:**
-
-```bash
-tumorboard batch variants.json --output results.json --max-concurrent 10
-```
-
-### `validate` - Validation
-
-Validate LLM assessments against a gold standard dataset.
+Provides:
+- Overall accuracy and per-tier precision/recall/F1
+- Failure analysis showing where and why mistakes occur
+- Tier distance metrics
 
 ```bash
 tumorboard validate <GOLD_STANDARD_FILE> [OPTIONS]
 
-Arguments:
-  GOLD_STANDARD_FILE    Gold standard JSON file
-
 Options:
-  -m, --model TEXT         LLM model [default: gpt-4o-mini]
-  -o, --output PATH        Save detailed results to JSON
-  -c, --max-concurrent N   Max concurrent validations [default: 3]
-  -v, --verbose            Enable debug logging
+  -m, --model TEXT         LLM model
+  -o, --output PATH        Save detailed results
+  -c, --max-concurrent N   Concurrent validations [default: 3]
 ```
 
-**Gold Standard Format:**
-
-```json
-{
-  "entries": [
-    {
-      "gene": "BRAF",
-      "variant": "V600E",
-      "tumor_type": "Melanoma",
-      "expected_tier": "Tier I",
-      "notes": "FDA-approved therapies available",
-      "references": ["PMID:12345"]
-    }
-  ]
-}
-```
-
-**Example:**
-
-```bash
-tumorboard validate benchmarks/gold_standard.json --output validation_results.json
-```
+Gold standard format: `{"entries": [{"gene": "BRAF", "variant": "V600E", "tumor_type": "Melanoma", "expected_tier": "Tier I", ...}]}`
 
 ## AMP/ASCO/CAP Tier System
 
@@ -246,190 +155,42 @@ tumorboard validate benchmarks/gold_standard.json --output validation_results.js
   - Known benign polymorphisms
   - No oncogenic evidence
 
-## Validation Framework
 
-The validation framework is a key differentiator, allowing you to:
+## Configuration
 
-1. **Benchmark Performance**: Test LLM accuracy against known correct classifications
-2. **Identify Weaknesses**: See exactly where and why the model makes mistakes
-3. **Track Improvements**: Monitor performance as you refine prompts or change models
-4. **Build Confidence**: Demonstrate reliability with metrics
+**Supported Models:** OpenAI (gpt-4, gpt-4o, gpt-4o-mini), Anthropic (claude-3 series), Google (gemini), Azure OpenAI
 
-### Validation Metrics
+**Data Sources:** MyVariant.info aggregates CIViC, ClinVar, and COSMIC databases
 
-- **Overall Accuracy**: Percentage of correct tier assignments
-- **Per-Tier Metrics**: Precision, recall, and F1 score for each tier
-- **Failure Analysis**: Detailed breakdown of incorrect predictions
-- **Tier Distance**: How far off incorrect predictions are
+**Performance:** Adjust `--max-concurrent` for batch processing. GPT-4 is more accurate but expensive; gpt-4o-mini offers good balance.
 
-### Example Validation Output
-
-```
-================================================================================
-VALIDATION REPORT
-================================================================================
-
-Total Cases: 15
-Correct Predictions: 13
-Overall Accuracy: 86.67%
-Average Confidence: 87.50%
-
---------------------------------------------------------------------------------
-PER-TIER METRICS
---------------------------------------------------------------------------------
-
-Tier I:
-  Precision: 90.00%
-  Recall: 90.00%
-  F1 Score: 90.00%
-  TP: 9, FP: 1, FN: 1
-
-Tier II:
-  Precision: 75.00%
-  Recall: 75.00%
-  F1 Score: 75.00%
-  TP: 3, FP: 1, FN: 1
-
-...
-```
-
-## Project Structure
-
-```
-tumor_board/
-├── src/tumorboard/
-│   ├── api/              # MyVariant.info API client
-│   ├── llm/              # LLM service and prompts
-│   ├── models/           # Pydantic data models
-│   ├── validation/       # Validation framework
-│   ├── engine.py         # Core assessment engine
-│   └── cli.py            # CLI interface
-├── tests/                # Test suite
-├── benchmarks/           # Gold standard datasets
-│   ├── gold_standard.json
-│   └── sample_batch.json
-├── pyproject.toml        # Project configuration
-└── README.md
-```
-
-## Development
-
-### Running Tests
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=tumorboard --cov-report=html
-
-# Run specific test file
-pytest tests/test_models.py
-```
-
-### Code Quality
-
-```bash
-# Format code
-ruff format .
-
-# Lint code
-ruff check .
-
-# Type checking
-mypy src/
-```
-
-### Adding New Gold Standard Entries
-
-Edit `benchmarks/gold_standard.json`:
-
-```json
-{
-  "gene": "YOUR_GENE",
-  "variant": "YOUR_VARIANT",
-  "tumor_type": "YOUR_TUMOR_TYPE",
-  "expected_tier": "Tier I|II|III|IV",
-  "notes": "Clinical rationale",
-  "references": ["Citation 1", "Citation 2"]
-}
-```
-
-## Supported LLM Models
-
-Via litellm, TumorBoard supports:
-
-- **OpenAI**: `gpt-4`, `gpt-4-turbo`, `gpt-4o`, `gpt-4o-mini`
-- **Anthropic**: `claude-3-opus-20240229`, `claude-3-sonnet-20240229`, `claude-3-haiku-20240307`
-- **Google**: `gemini-pro`, `gemini-1.5-pro`
-- **Azure OpenAI**: `azure/<deployment>`
-- **And many more...**
-
-Specify the model with the `--model` flag:
-
-```bash
-tumorboard assess BRAF V600E --tumor Melanoma --model claude-3-sonnet-20240229
-```
-
-## Data Sources
-
-- **MyVariant.info**: Aggregates data from multiple sources
-  - **CIViC**: Clinical Interpretations of Variants in Cancer
-  - **ClinVar**: Clinical significance of variants
-  - **COSMIC**: Catalogue of Somatic Mutations in Cancer
-
-No authentication required for MyVariant.info API.
-
-## Performance Considerations
-
-- **API Rate Limits**: MyVariant.info has rate limits; use batch processing for large datasets
-- **LLM Costs**: GPT-4 is more accurate but expensive; gpt-4o-mini is a good balance
-- **Concurrency**: Adjust `--max-concurrent` based on API limits and costs
-- **Caching**: Consider caching evidence data for repeated assessments
-
-## Limitations
-
-- **Evidence Quality**: Assessment quality depends on available database evidence
-- **LLM Hallucination**: LLMs may occasionally generate incorrect information
-- **Novel Variants**: Limited evidence for rare/novel variants
-- **Context Window**: Very long evidence may be truncated
 
 ## Contributing
 
-Contributions welcome! Please:
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, testing, and code quality guidelines.
 
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit a pull request
+## License & Citation
 
-## License
+**Author:** Dami Gupta (dami.gupta@gmail.com)
 
-MIT License - see LICENSE file for details
+**License:** MIT License
 
-## Citation
+**Citation:** If you use TumorBoard in your research, please cite:
 
-If you use TumorBoard in your research, please cite:
-
-```
-[Citation information to be added]
+```bibtex
+@software{tumorboard2025,
+  author = {Gupta, Dami},
+  title = {TumorBoard: LLM-Powered Cancer Variant Actionability Assessment},
+  year = {2025},
+  url = {https://github.com/dami-gupta-git/tumor_board_v0}
+}
 ```
 
 ## References
 
 - [AMP/ASCO/CAP Guidelines](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5707196/)
-- [MyVariant.info](https://myvariant.info/)
-- [CIViC](https://civicdb.org/)
-- [ClinVar](https://www.ncbi.nlm.nih.gov/clinvar/)
-- [COSMIC](https://cancer.sanger.ac.uk/cosmic)
-
-## Support
-
-For issues, questions, or contributions:
-- GitHub Issues: [repository-url]/issues
-- Documentation: [repository-url]/docs
+- [MyVariant.info](https://myvariant.info/) | [CIViC](https://civicdb.org/) | [ClinVar](https://www.ncbi.nlm.nih.gov/clinvar/) | [COSMIC](https://cancer.sanger.ac.uk/cosmic)
 
 ---
 
-**Note**: This tool is for research purposes only. Clinical decisions should always be made by qualified healthcare professionals based on comprehensive patient evaluation.
+**Note**: This tool is for research purposes only. Clinical decisions should always be made by qualified healthcare professionals.
