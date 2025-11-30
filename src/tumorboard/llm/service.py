@@ -11,7 +11,7 @@ Functions:
 2. Model Inference: Async calls to LLM providers via litellm abstraction layer
 3. Response Parsing: Extracts structured JSON from LLM output (handles markdown wrapping)
 
-Key Design Decisions:
+Design Decisions:
 ---------------------
 - Uses litellm for provider-agnostic LLM access (OpenAI, Anthropic, etc.)
 - Low temperature (0.1) prioritizes determinism over creativity
