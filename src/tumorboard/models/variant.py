@@ -8,7 +8,7 @@ class VariantInput(BaseModel):
 
     gene: str = Field(..., description="Gene symbol (e.g., BRAF)")
     variant: str = Field(..., description="Variant notation (e.g., V600E)")
-    tumor_type: str = Field(..., description="Tumor type (e.g., Melanoma)")
+    tumor_type: str | None = Field(None, description="Tumor type (e.g., Melanoma)")
 
     def to_hgvs(self) -> str:
         """Convert to HGVS-like notation for API queries."""

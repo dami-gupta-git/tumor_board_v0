@@ -68,8 +68,11 @@ Alternatively, you can use env.example - rename it to .env, and specify your key
 **Basic Usage:**
 
 ```bash
-# Single variant
+# Single variant (with tumor type)
 tumorboard assess BRAF V600E --tumor "Melanoma"
+
+# Single variant (without tumor type - optional)
+tumorboard assess BRAF V600E
 
 # Batch processing
 tumorboard batch benchmarks/sample_batch.json --output results.json
@@ -84,9 +87,10 @@ tumorboard validate benchmarks/gold_standard.json
 Specify a single variant, then run this command to fetch variant evidence and use the LLM to assign an AMP/ASCO/CAP tier classification.
 
 ```bash
-tumorboard assess <GENE> <VARIANT> --tumor <TUMOR_TYPE> [OPTIONS]
+tumorboard assess <GENE> <VARIANT> [OPTIONS]
 
 Options:
+  -t, --tumor TEXT    Tumor type (optional, e.g., "Melanoma")
   -m, --model TEXT    LLM model [default: gpt-4o-mini]
   -o, --output PATH   Save to JSON file
 ```

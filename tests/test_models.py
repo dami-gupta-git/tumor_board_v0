@@ -28,6 +28,17 @@ class TestVariantInput:
         variant = VariantInput(gene="BRAF", variant="V600E", tumor_type="Melanoma")
         assert variant.to_hgvs() == "BRAF:V600E"
 
+    def test_variant_input_without_tumor(self):
+        """Test creating a variant input without tumor type."""
+        variant = VariantInput(
+            gene="KRAS",
+            variant="G12C",
+            tumor_type=None,
+        )
+        assert variant.gene == "KRAS"
+        assert variant.variant == "G12C"
+        assert variant.tumor_type is None
+
 
 class TestEvidence:
     """Tests for Evidence models."""
@@ -98,6 +109,38 @@ class TestActionabilityAssessment:
         assert "Melanoma" in report
         assert "Tier I" in report
         assert "Vemurafenib" in report
+
+    def test_assessment_without_tumor(self):
+        """Test creating an assessment without tumor type."""
+        assessment = ActionabilityAssessment(
+            gene="KRAS",
+            variant="G12C",
+            tumor_type=None,
+            tier=ActionabilityTier.TIER_III,
+            confidence_score=0.5,
+            summary="General assessment without tumor context",
+            rationale="Test rationale",
+        )
+        assert assessment.gene == "KRAS"
+        assert assessment.tumor_type is None
+        assert assessment.tier == ActionabilityTier.TIER_III
+
+    def test_to_report_without_tumor(self):
+        """Test report generation without tumor type."""
+        assessment = ActionabilityAssessment(
+            gene="KRAS",
+            variant="G12C",
+            tumor_type=None,
+            tier=ActionabilityTier.TIER_III,
+            confidence_score=0.5,
+            summary="General assessment",
+            rationale="Test rationale",
+        )
+        report = assessment.to_report()
+        assert "KRAS" in report
+        assert "G12C" in report
+        assert "Not specified" in report
+        assert "Tier III" in report
 
 
 class TestValidationModels:

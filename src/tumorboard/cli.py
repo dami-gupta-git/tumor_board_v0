@@ -13,6 +13,7 @@ Key Design:
 
 import asyncio
 import json
+import warnings
 from pathlib import Path
 from typing import Optional
 import typer
@@ -20,6 +21,10 @@ from dotenv import load_dotenv
 from tumorboard.engine import AssessmentEngine
 from tumorboard.models.variant import VariantInput
 from tumorboard.validation.validator import Validator
+
+# Suppress litellm's async cleanup warnings (harmless internal warnings)
+warnings.filterwarnings("ignore", message=".*async_success_handler.*")
+warnings.filterwarnings("ignore", message=".*coroutine.*was never awaited.*")
 
 load_dotenv()
 
@@ -34,7 +39,7 @@ app = typer.Typer(
 def assess(
     gene: str = typer.Argument(..., help="Gene symbol (e.g., BRAF)"),
     variant: str = typer.Argument(..., help="Variant notation (e.g., V600E)"),
-    tumor: str = typer.Option(..., "--tumor", "-t", help="Tumor type"),
+    tumor: Optional[str] = typer.Option(None, "--tumor", "-t", help="Tumor type"),
     model: str = typer.Option("gpt-4o-mini", "--model", "-m", help="LLM model"),
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output JSON file"),
 ) -> None:
@@ -43,7 +48,10 @@ def assess(
     async def run_assessment() -> None:
         variant_input = VariantInput(gene=gene, variant=variant, tumor_type=tumor)
 
-        print(f"\nAssessing {gene} {variant} in {tumor}...")
+        if tumor:
+            print(f"\nAssessing {gene} {variant} in {tumor}...")
+        else:
+            print(f"\nAssessing {gene} {variant}...")
 
         async with AssessmentEngine(llm_model=model) as engine:
             assessment = await engine.assess_variant(variant_input)

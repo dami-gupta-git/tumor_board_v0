@@ -75,21 +75,24 @@ Provide ONLY the JSON output, no additional text.
 """
 
 
-def create_assessment_prompt(gene: str, variant: str, tumor_type: str, evidence_summary: str) -> str:
+def create_assessment_prompt(gene: str, variant: str, tumor_type: str | None, evidence_summary: str) -> str:
     """Create the assessment prompt with evidence.
 
     Args:
         gene: Gene symbol
         variant: Variant notation
-        tumor_type: Tumor type
+        tumor_type: Tumor type (optional)
         evidence_summary: Formatted evidence summary
 
     Returns:
         Complete prompt string
     """
+    # Handle None tumor_type
+    tumor_display = tumor_type if tumor_type else "Not specified (general assessment)"
+
     return ACTIONABILITY_ASSESSMENT_PROMPT.format(
         gene=gene,
         variant=variant,
-        tumor_type=tumor_type,
+        tumor_type=tumor_display,
         evidence_summary=evidence_summary,
     )

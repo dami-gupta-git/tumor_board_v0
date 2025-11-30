@@ -37,7 +37,7 @@ class ActionabilityAssessment(BaseModel):
 
     gene: str
     variant: str
-    tumor_type: str
+    tumor_type: str | None
     tier: ActionabilityTier = Field(..., description="AMP/ASCO/CAP tier classification")
     confidence_score: float = Field(
         ..., ge=0.0, le=1.0, description="Confidence in the assessment (0-1)"
@@ -57,7 +57,8 @@ class ActionabilityAssessment(BaseModel):
 
     def to_report(self) -> str:
         """Simple report output."""
-        report = f"\nVariant: {self.gene} {self.variant} | Tumor: {self.tumor_type}\n"
+        tumor_display = self.tumor_type if self.tumor_type else "Not specified"
+        report = f"\nVariant: {self.gene} {self.variant} | Tumor: {tumor_display}\n"
         report += f"Tier: {self.tier.value} | Confidence: {self.confidence_score:.1%}\n\n"
         report += f"{self.summary}\n"
 

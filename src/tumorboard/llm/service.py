@@ -38,7 +38,7 @@ class LLMService:
         self,
         gene: str,
         variant: str,
-        tumor_type: str,
+        tumor_type: str | None,
         evidence: Evidence,
     ) -> ActionabilityAssessment:
         """Assess variant using LLM."""
