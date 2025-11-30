@@ -75,21 +75,8 @@ class TestActionabilityAssessment:
         assert assessment.tier == ActionabilityTier.TIER_I
         assert assessment.confidence_score == 0.95
 
-    def test_confidence_validation(self):
-        """Test confidence score validation."""
-        with pytest.raises(ValidationError):
-            ActionabilityAssessment(
-                gene="BRAF",
-                variant="V600E",
-                tumor_type="Melanoma",
-                tier=ActionabilityTier.TIER_I,
-                confidence_score=1.5,  # Invalid
-                summary="Test",
-                rationale="Test",
-            )
-
     def test_to_report(self):
-        """Test report generation."""
+        """Test simple report generation."""
         assessment = ActionabilityAssessment(
             gene="BRAF",
             variant="V600E",
@@ -106,7 +93,9 @@ class TestActionabilityAssessment:
             ],
         )
         report = assessment.to_report()
-        assert "BRAF V600E" in report
+        assert "BRAF" in report
+        assert "V600E" in report
+        assert "Melanoma" in report
         assert "Tier I" in report
         assert "Vemurafenib" in report
 

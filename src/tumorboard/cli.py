@@ -2,109 +2,48 @@
 
 import asyncio
 import json
-import logging
-import sys
 from pathlib import Path
 from typing import Optional
-
 import typer
 from dotenv import load_dotenv
-from rich.console import Console
-from rich.logging import RichHandler
-from rich.progress import Progress, SpinnerColumn, TextColumn
-
 from tumorboard.engine import AssessmentEngine
 from tumorboard.models.variant import VariantInput
 from tumorboard.validation.validator import Validator
 
-# Load environment variables from .env file
 load_dotenv()
 
-# Create Typer app
 app = typer.Typer(
     name="tumorboard",
-    help="LLM-powered cancer variant actionability assessment with validation",
+    help="LLM-powered cancer variant actionability assessment",
     add_completion=False,
 )
-
-# Rich console for pretty output
-console = Console()
-
-
-def setup_logging(verbose: bool = False) -> None:
-    """Setup logging configuration.
-
-    Args:
-        verbose: Enable debug logging
-    """
-    level = logging.DEBUG if verbose else logging.INFO
-
-    logging.basicConfig(
-        level=level,
-        format="%(message)s",
-        handlers=[RichHandler(rich_tracebacks=True, console=console)],
-    )
 
 
 @app.command()
 def assess(
     gene: str = typer.Argument(..., help="Gene symbol (e.g., BRAF)"),
     variant: str = typer.Argument(..., help="Variant notation (e.g., V600E)"),
-    tumor: str = typer.Option(..., "--tumor", "-t", help="Tumor type (e.g., Melanoma)"),
-    model: str = typer.Option(
-        "gpt-4o-mini",
-        "--model",
-        "-m",
-        help="LLM model to use (e.g., gpt-4, claude-3-sonnet-20240229)",
-    ),
-    output: Optional[Path] = typer.Option(
-        None,
-        "--output",
-        "-o",
-        help="Output JSON file path",
-    ),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
+    tumor: str = typer.Option(..., "--tumor", "-t", help="Tumor type"),
+    model: str = typer.Option("gpt-4o-mini", "--model", "-m", help="LLM model"),
+    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output JSON file"),
 ) -> None:
-    """Assess clinical actionability of a single variant.
-
-    Example:
-        tumorboard assess BRAF V600E --tumor "Melanoma"
-    """
-    setup_logging(verbose)
+    """Assess clinical actionability of a single variant."""
 
     async def run_assessment() -> None:
-        """Run the assessment asynchronously."""
         variant_input = VariantInput(gene=gene, variant=variant, tumor_type=tumor)
 
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-        ) as progress:
-            progress.add_task(
-                description=f"Assessing {gene} {variant} in {tumor}...",
-                total=None,
-            )
+        print(f"\nAssessing {gene} {variant} in {tumor}...")
 
-            async with AssessmentEngine(llm_model=model) as engine:
-                try:
-                    assessment = await engine.assess_variant(variant_input)
+        async with AssessmentEngine(llm_model=model) as engine:
+            assessment = await engine.assess_variant(variant_input)
 
-                    # Display report
-                    console.print("\n")
-                    console.print(assessment.to_report())
-                    console.print("\n")
+            print(assessment.to_report())
 
-                    # Save to file if requested
-                    if output:
-                        output_data = assessment.model_dump(mode="json")
-                        with open(output, "w") as f:
-                            json.dump(output_data, f, indent=2)
-                        console.print(f"[green]Saved to {output}[/green]")
-
-                except Exception as e:
-                    console.print(f"[red]Error: {str(e)}[/red]")
-                    raise typer.Exit(1)
+            if output:
+                output_data = assessment.model_dump(mode="json")
+                with open(output, "w") as f:
+                    json.dump(output_data, f, indent=2)
+                print(f"Saved to {output}")
 
     asyncio.run(run_assessment())
 
@@ -112,101 +51,43 @@ def assess(
 @app.command()
 def batch(
     input_file: Path = typer.Argument(..., help="Input JSON file with variants"),
-    output: Path = typer.Option(
-        "results.json",
-        "--output",
-        "-o",
-        help="Output JSON file path",
-    ),
-    model: str = typer.Option(
-        "gpt-4o-mini",
-        "--model",
-        "-m",
-        help="LLM model to use",
-    ),
-    max_concurrent: int = typer.Option(
-        5,
-        "--max-concurrent",
-        "-c",
-        help="Maximum concurrent assessments",
-    ),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
+    output: Path = typer.Option("results.json", "--output", "-o", help="Output file"),
+    model: str = typer.Option("gpt-4o-mini", "--model", "-m", help="LLM model"),
+    max_concurrent: int = typer.Option(5, "--max-concurrent", "-c", help="Max concurrent"),
 ) -> None:
-    """Batch process multiple variants from a JSON file.
-
-    Input JSON format:
-    [
-        {"gene": "BRAF", "variant": "V600E", "tumor_type": "Melanoma"},
-        {"gene": "EGFR", "variant": "L858R", "tumor_type": "Lung Adenocarcinoma"}
-    ]
-
-    Example:
-        tumorboard batch variants.json --output results.json
-    """
-    setup_logging(verbose)
+    """Batch process multiple variants."""
 
     if not input_file.exists():
-        console.print(f"[red]Error: Input file not found: {input_file}[/red]")
+        print(f"Error: Input file not found: {input_file}")
         raise typer.Exit(1)
 
     async def run_batch() -> None:
-        """Run batch assessment asynchronously."""
-        # Load variants from file
-        try:
-            with open(input_file, "r") as f:
-                data = json.load(f)
+        with open(input_file, "r") as f:
+            data = json.load(f)
 
-            variants = [VariantInput(**item) for item in data]
-            console.print(f"[blue]Loaded {len(variants)} variants from {input_file}[/blue]\n")
+        variants = [VariantInput(**item) for item in data]
+        print(f"\nLoaded {len(variants)} variants from {input_file}")
 
-        except Exception as e:
-            console.print(f"[red]Error loading variants: {str(e)}[/red]")
-            raise typer.Exit(1)
+        async with AssessmentEngine(llm_model=model) as engine:
+            print(f"Assessing {len(variants)} variants...")
+            assessments = await engine.batch_assess(variants, max_concurrent=max_concurrent)
 
-        # Run batch assessment
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-        ) as progress:
-            task = progress.add_task(
-                description=f"Assessing {len(variants)} variants...",
-                total=len(variants),
-            )
+            output_data = [assessment.model_dump(mode="json") for assessment in assessments]
+            with open(output, "w") as f:
+                json.dump(output_data, f, indent=2)
 
-            async with AssessmentEngine(llm_model=model) as engine:
-                try:
-                    assessments = await engine.batch_assess(
-                        variants,
-                        max_concurrent=max_concurrent,
-                    )
+            print(f"\nSuccessfully assessed {len(assessments)}/{len(variants)} variants")
+            print(f"Results saved to {output}")
 
-                    progress.update(task, completed=len(variants))
+            # Simple tier counts
+            tier_counts = {}
+            for assessment in assessments:
+                tier = assessment.tier.value
+                tier_counts[tier] = tier_counts.get(tier, 0) + 1
 
-                    # Save results
-                    output_data = [assessment.model_dump(mode="json") for assessment in assessments]
-                    with open(output, "w") as f:
-                        json.dump(output_data, f, indent=2)
-
-                    console.print(
-                        f"\n[green]Successfully assessed {len(assessments)}/{len(variants)} "
-                        f"variants[/green]"
-                    )
-                    console.print(f"[green]Results saved to {output}[/green]\n")
-
-                    # Summary statistics
-                    tier_counts = {}
-                    for assessment in assessments:
-                        tier = assessment.tier.value
-                        tier_counts[tier] = tier_counts.get(tier, 0) + 1
-
-                    console.print("[bold]Tier Distribution:[/bold]")
-                    for tier, count in sorted(tier_counts.items()):
-                        console.print(f"  {tier}: {count}")
-
-                except Exception as e:
-                    console.print(f"[red]Error during batch assessment: {str(e)}[/red]")
-                    raise typer.Exit(1)
+            print("\nTier Distribution:")
+            for tier, count in sorted(tier_counts.items()):
+                print(f"  {tier}: {count}")
 
     asyncio.run(run_batch())
 
@@ -214,94 +95,33 @@ def batch(
 @app.command()
 def validate(
     gold_standard: Path = typer.Argument(..., help="Gold standard JSON file"),
-    model: str = typer.Option(
-        "gpt-4o-mini",
-        "--model",
-        "-m",
-        help="LLM model to use",
-    ),
-    output: Optional[Path] = typer.Option(
-        None,
-        "--output",
-        "-o",
-        help="Output JSON file for detailed results",
-    ),
-    max_concurrent: int = typer.Option(
-        3,
-        "--max-concurrent",
-        "-c",
-        help="Maximum concurrent validations",
-    ),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
+    model: str = typer.Option("gpt-4o-mini", "--model", "-m", help="LLM model"),
+    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output file"),
+    max_concurrent: int = typer.Option(3, "--max-concurrent", "-c", help="Max concurrent"),
 ) -> None:
-    """Validate LLM assessments against gold standard dataset.
-
-    Gold standard JSON format:
-    {
-      "entries": [
-        {
-          "gene": "BRAF",
-          "variant": "V600E",
-          "tumor_type": "Melanoma",
-          "expected_tier": "Tier I",
-          "notes": "FDA-approved for melanoma",
-          "references": ["PMID:12345"]
-        }
-      ]
-    }
-
-    Example:
-        tumorboard validate benchmarks/gold_standard.json
-    """
-    setup_logging(verbose)
+    """Validate LLM assessments against gold standard."""
 
     if not gold_standard.exists():
-        console.print(f"[red]Error: Gold standard file not found: {gold_standard}[/red]")
+        print(f"Error: Gold standard file not found: {gold_standard}")
         raise typer.Exit(1)
 
     async def run_validation() -> None:
-        """Run validation asynchronously."""
         async with AssessmentEngine(llm_model=model) as engine:
             validator = Validator(engine)
 
-            try:
-                # Load gold standard
-                entries = validator.load_gold_standard(gold_standard)
-                console.print(f"[blue]Loaded {len(entries)} gold standard entries[/blue]\n")
+            entries = validator.load_gold_standard(gold_standard)
+            print(f"\nLoaded {len(entries)} gold standard entries")
 
-                # Run validation
-                with Progress(
-                    SpinnerColumn(),
-                    TextColumn("[progress.description]{task.description}"),
-                    console=console,
-                ) as progress:
-                    task = progress.add_task(
-                        description="Running validation...",
-                        total=len(entries),
-                    )
+            print("Running validation...")
+            metrics = await validator.validate_dataset(entries, max_concurrent=max_concurrent)
 
-                    metrics = await validator.validate_dataset(
-                        entries,
-                        max_concurrent=max_concurrent,
-                    )
+            print(metrics.to_report())
 
-                    progress.update(task, completed=len(entries))
-
-                # Display report
-                console.print("\n")
-                console.print(metrics.to_report())
-                console.print("\n")
-
-                # Save detailed results if requested
-                if output:
-                    output_data = metrics.model_dump(mode="json")
-                    with open(output, "w") as f:
-                        json.dump(output_data, f, indent=2)
-                    console.print(f"[green]Detailed results saved to {output}[/green]")
-
-            except Exception as e:
-                console.print(f"[red]Error during validation: {str(e)}[/red]")
-                raise typer.Exit(1)
+            if output:
+                output_data = metrics.model_dump(mode="json")
+                with open(output, "w") as f:
+                    json.dump(output_data, f, indent=2)
+                print(f"\nDetailed results saved to {output}")
 
     asyncio.run(run_validation())
 
@@ -310,8 +130,7 @@ def validate(
 def version() -> None:
     """Show version information."""
     from tumorboard import __version__
-
-    console.print(f"TumorBoard version {__version__}")
+    print(f"TumorBoard version {__version__}")
 
 
 if __name__ == "__main__":

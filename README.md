@@ -89,16 +89,18 @@ tumorboard assess <GENE> <VARIANT> --tumor <TUMOR_TYPE> [OPTIONS]
 Options:
   -m, --model TEXT    LLM model [default: gpt-4o-mini]
   -o, --output PATH   Save to JSON file
-  -v, --verbose       Debug logging
 ```
 
 Example output:
 ```
+Assessing BRAF V600E in Melanoma...
+
 Variant: BRAF V600E | Tumor: Melanoma
 Tier: Tier I | Confidence: 95.0%
 
-BRAF V600E is a well-established actionable mutation in melanoma with
-FDA-approved targeted therapies including vemurafenib, dabrafenib...
+BRAF V600E is a well-established actionable mutation in melanoma...
+
+Therapies: Vemurafenib, Dabrafenib
 ```
 
 ### `batch` - Multiple Variants
