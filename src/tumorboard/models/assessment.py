@@ -60,9 +60,21 @@ class ActionabilityAssessment(BaseModel):
     ncbi_gene_id: str | None = Field(None, description="NCBI Entrez Gene ID")
     dbsnp_id: str | None = Field(None, description="dbSNP rs number")
     clinvar_id: str | None = Field(None, description="ClinVar variation ID")
+    clinvar_clinical_significance: str | None = Field(None, description="ClinVar clinical significance")
+    clinvar_accession: str | None = Field(None, description="ClinVar accession number")
     hgvs_genomic: str | None = Field(None, description="HGVS genomic notation")
     hgvs_protein: str | None = Field(None, description="HGVS protein notation")
     hgvs_transcript: str | None = Field(None, description="HGVS transcript notation")
+
+    # Functional annotations
+    snpeff_effect: str | None = Field(None, description="SnpEff predicted effect")
+    polyphen2_prediction: str | None = Field(None, description="PolyPhen2 HDIV prediction")
+    cadd_score: float | None = Field(None, description="CADD phred score")
+    gnomad_exome_af: float | None = Field(None, description="gnomAD exome allele frequency")
+
+    # Transcript information
+    transcript_id: str | None = Field(None, description="Reference transcript ID")
+    transcript_consequence: str | None = Field(None, description="Transcript consequence")
 
     def to_report(self) -> str:
         """Simple report output."""
@@ -95,6 +107,40 @@ class ActionabilityAssessment(BaseModel):
 
         if hgvs_notations:
             report += f"HGVS: {' | '.join(hgvs_notations)}\n"
+
+        # Add ClinVar details if available
+        clinvar_details = []
+        if self.clinvar_clinical_significance:
+            clinvar_details.append(f"Significance: {self.clinvar_clinical_significance}")
+        if self.clinvar_accession:
+            clinvar_details.append(f"Accession: {self.clinvar_accession}")
+
+        if clinvar_details:
+            report += f"ClinVar: {' | '.join(clinvar_details)}\n"
+
+        # Add functional annotations if available
+        annotations = []
+        if self.snpeff_effect:
+            annotations.append(f"Effect: {self.snpeff_effect}")
+        if self.polyphen2_prediction:
+            annotations.append(f"PolyPhen2: {self.polyphen2_prediction}")
+        if self.cadd_score is not None:
+            annotations.append(f"CADD: {self.cadd_score:.2f}")
+        if self.gnomad_exome_af is not None:
+            annotations.append(f"gnomAD AF: {self.gnomad_exome_af:.6f}")
+
+        if annotations:
+            report += f"Annotations: {' | '.join(annotations)}\n"
+
+        # Add transcript information if available
+        transcript_info = []
+        if self.transcript_id:
+            transcript_info.append(f"ID: {self.transcript_id}")
+        if self.transcript_consequence:
+            transcript_info.append(f"Consequence: {self.transcript_consequence}")
+
+        if transcript_info:
+            report += f"Transcript: {' | '.join(transcript_info)}\n"
 
         report += f"\n{self.summary}\n"
 

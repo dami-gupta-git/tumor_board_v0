@@ -91,7 +91,17 @@ class LLMService:
             ncbi_gene_id=evidence.ncbi_gene_id,
             dbsnp_id=evidence.dbsnp_id,
             clinvar_id=evidence.clinvar_id,
+            clinvar_clinical_significance=evidence.clinvar_clinical_significance,
+            clinvar_accession=evidence.clinvar_accession,
             hgvs_genomic=evidence.hgvs_genomic,
             hgvs_protein=evidence.hgvs_protein,
             hgvs_transcript=evidence.hgvs_transcript,
+            # Add functional annotations from evidence
+            snpeff_effect=evidence.snpeff_effect,
+            polyphen2_prediction=evidence.polyphen2_prediction,
+            cadd_score=evidence.cadd_score,
+            gnomad_exome_af=evidence.gnomad_exome_af,
+            # Add transcript information from evidence
+            transcript_id=evidence.transcript_id,
+            transcript_consequence=evidence.transcript_consequence,
         )

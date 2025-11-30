@@ -104,13 +104,16 @@ Variant: BRAF V600E | Tumor: Melanoma
 Tier: Tier I | Confidence: 95.0%
 Identifiers: COSMIC: COSM476 | NCBI Gene: 673 | dbSNP: rs113488022 | ClinVar: 13961
 HGVS: Genomic: chr7:g.140453136A>T
+ClinVar: Significance: Pathogenic | Accession: RCV000013961
+Annotations: Effect: missense_variant | PolyPhen2: D | CADD: 32.00 | gnomAD AF: 0.000004
+Transcript: ID: NM_004333.4 | Consequence: missense_variant
 
 BRAF V600E is a well-established actionable mutation in melanoma...
 
 Therapies: Vemurafenib, Dabrafenib
 ```
 
-**Note**: Database identifiers (COSMIC, dbSNP, ClinVar, NCBI Gene IDs, HGVS notations) are automatically extracted from MyVariant.info when available and displayed in both console output and JSON files.
+**Note**: Database identifiers, functional annotations, and transcript information are automatically extracted from MyVariant.info when available and displayed in both console output and JSON files.
 
 ### `batch` - Multiple Variants
 Specify a JSON file with variant details (gene, variant, tumor type), then run this command to process them concurrently and generate batch results.
@@ -166,25 +169,39 @@ Gold standard format: `{"entries": [{"gene": "BRAF", "variant": "V600E", "tumor_
   - No oncogenic evidence
 
 
-## Database Identifiers
+## Variant Annotations
 
-TumorBoard automatically extracts and displays standardized variant identifiers when available:
+TumorBoard automatically extracts comprehensive variant annotations from MyVariant.info:
 
+### Database Identifiers
 - **COSMIC ID**: Catalogue of Somatic Mutations in Cancer identifier (e.g., COSM476)
 - **NCBI Gene ID**: Entrez Gene identifier (e.g., 673 for BRAF)
 - **dbSNP ID**: Reference SNP identifier (e.g., rs113488022)
 - **ClinVar ID**: ClinVar variation identifier (e.g., 13961)
-- **HGVS Notations**:
-  - Genomic notation (e.g., chr7:g.140453136A>T)
-  - Protein notation (when available)
-  - Transcript notation (when available)
+- **ClinVar Clinical Significance**: Pathogenicity classification (e.g., Pathogenic, Benign)
+- **ClinVar Accession**: ClinVar record accession (e.g., RCV000013961)
 
-These identifiers are included in:
+### HGVS Notations
+- **Genomic**: Chromosome-level notation (e.g., chr7:g.140453136A>T)
+- **Protein**: Amino acid change notation (when available)
+- **Transcript**: cDNA-level notation (when available)
+
+### Functional Annotations
+- **SnpEff Effect**: Predicted variant effect (e.g., missense_variant, stop_gained)
+- **PolyPhen2**: Pathogenicity prediction (D=Damaging, P=Possibly damaging, B=Benign)
+- **CADD Score**: Combined Annotation Dependent Depletion score (higher = more deleterious)
+- **gnomAD AF**: Population allele frequency from gnomAD exomes (helps assess rarity)
+
+### Transcript Information
+- **Transcript ID**: Reference transcript identifier (e.g., NM_004333.4)
+- **Consequence**: Effect on transcript (e.g., missense_variant, frameshift_variant)
+
+All annotations are included in:
 - Console output (via the assessment report)
 - JSON output files (when using `--output` flag)
 - Batch processing results
 
-**Note**: Identifier availability depends on database coverage. Not all variants have entries in all databases.
+**Note**: Annotation availability depends on database coverage. Not all variants have complete annotation in all databases.
 
 ## Configuration
 

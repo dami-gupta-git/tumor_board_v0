@@ -307,8 +307,16 @@ class MyVariantClient:
             "entrezgene",  # NCBI Gene ID
             "cosmic.cosmic_id",  # COSMIC mutation ID
             "clinvar.variant_id",  # ClinVar variation ID
+            "clinvar.clinical_significance",  # ClinVar clinical significance
+            "clinvar.accession",  # ClinVar accession
             "dbsnp.rsid",  # dbSNP rs number
             "hgvs",  # HGVS notations (genomic, protein, transcript)
+            "snpeff",  # SnpEff effect prediction
+            "dbnsfp.polyphen2.hdiv.pred",  # PolyPhen2 prediction
+            "dbnsfp.cadd.phred",  # CADD phred score
+            "gnomad_exome.af.af",  # gnomAD exome allele frequency
+            "vcf.alt",  # VCF alternative allele
+            "vcf.ref",  # VCF reference allele
         ]
 
         try:
@@ -342,9 +350,17 @@ class MyVariantClient:
                     ncbi_gene_id=None,
                     dbsnp_id=None,
                     clinvar_id=None,
+                    clinvar_clinical_significance=None,
+                    clinvar_accession=None,
                     hgvs_genomic=None,
                     hgvs_protein=None,
                     hgvs_transcript=None,
+                    snpeff_effect=None,
+                    polyphen2_prediction=None,
+                    cadd_score=None,
+                    gnomad_exome_af=None,
+                    transcript_id=None,
+                    transcript_consequence=None,
                     raw_data=result,
                 )
 
@@ -391,13 +407,36 @@ class MyVariantClient:
                         dbsnp_id = f"rs{rsid}" if not str(rsid).startswith("rs") else str(rsid)
 
             clinvar_id = None
+            clinvar_clinical_significance = None
+            clinvar_accession = None
             if "clinvar" in hit_data:
                 clinvar_data = hit_data["clinvar"]
                 if isinstance(clinvar_data, dict):
                     clinvar_id = str(clinvar_data.get("variant_id")) if "variant_id" in clinvar_data else None
+                    # Extract clinical significance
+                    clin_sig = clinvar_data.get("clinical_significance")
+                    if clin_sig:
+                        if isinstance(clin_sig, list):
+                            clinvar_clinical_significance = ", ".join(str(s) for s in clin_sig)
+                        else:
+                            clinvar_clinical_significance = str(clin_sig)
+                    # Extract accession
+                    accession = clinvar_data.get("accession")
+                    if accession:
+                        clinvar_accession = str(accession)
                 elif isinstance(clinvar_data, list) and clinvar_data:
-                    if isinstance(clinvar_data[0], dict) and "variant_id" in clinvar_data[0]:
-                        clinvar_id = str(clinvar_data[0]["variant_id"])
+                    if isinstance(clinvar_data[0], dict):
+                        if "variant_id" in clinvar_data[0]:
+                            clinvar_id = str(clinvar_data[0]["variant_id"])
+                        clin_sig = clinvar_data[0].get("clinical_significance")
+                        if clin_sig:
+                            if isinstance(clin_sig, list):
+                                clinvar_clinical_significance = ", ".join(str(s) for s in clin_sig)
+                            else:
+                                clinvar_clinical_significance = str(clin_sig)
+                        accession = clinvar_data[0].get("accession")
+                        if accession:
+                            clinvar_accession = str(accession)
 
             # Extract HGVS notations
             hgvs_genomic = None
@@ -438,6 +477,79 @@ class MyVariantClient:
                     if ":p." in name:
                         hgvs_protein = name
 
+            # Extract functional annotations
+            snpeff_effect = None
+            if "snpeff" in hit_data:
+                snpeff_data = hit_data["snpeff"]
+                if isinstance(snpeff_data, dict):
+                    ann = snpeff_data.get("ann")
+                    if isinstance(ann, dict):
+                        snpeff_effect = ann.get("effect")
+                    elif isinstance(ann, list) and ann:
+                        if isinstance(ann[0], dict):
+                            snpeff_effect = ann[0].get("effect")
+
+            polyphen2_prediction = None
+            if "dbnsfp" in hit_data:
+                dbnsfp_data = hit_data["dbnsfp"]
+                if isinstance(dbnsfp_data, dict):
+                    polyphen2_data = dbnsfp_data.get("polyphen2", {})
+                    if isinstance(polyphen2_data, dict):
+                        hdiv = polyphen2_data.get("hdiv", {})
+                        if isinstance(hdiv, dict):
+                            polyphen2_prediction = hdiv.get("pred")
+
+            cadd_score = None
+            if "dbnsfp" in hit_data:
+                dbnsfp_data = hit_data["dbnsfp"]
+                if isinstance(dbnsfp_data, dict):
+                    cadd_data = dbnsfp_data.get("cadd", {})
+                    if isinstance(cadd_data, dict):
+                        phred = cadd_data.get("phred")
+                        if phred is not None:
+                            try:
+                                cadd_score = float(phred)
+                            except (ValueError, TypeError):
+                                pass
+            # Also check top-level cadd field
+            if cadd_score is None and "cadd" in hit_data:
+                cadd_data = hit_data["cadd"]
+                if isinstance(cadd_data, dict):
+                    phred = cadd_data.get("phred")
+                    if phred is not None:
+                        try:
+                            cadd_score = float(phred)
+                        except (ValueError, TypeError):
+                            pass
+
+            gnomad_exome_af = None
+            if "gnomad_exome" in hit_data:
+                gnomad_data = hit_data["gnomad_exome"]
+                if isinstance(gnomad_data, dict):
+                    af_data = gnomad_data.get("af", {})
+                    if isinstance(af_data, dict):
+                        af = af_data.get("af")
+                        if af is not None:
+                            try:
+                                gnomad_exome_af = float(af)
+                            except (ValueError, TypeError):
+                                pass
+
+            # Extract transcript information
+            transcript_id = None
+            transcript_consequence = None
+            if "snpeff" in hit_data:
+                snpeff_data = hit_data["snpeff"]
+                if isinstance(snpeff_data, dict):
+                    ann = snpeff_data.get("ann")
+                    if isinstance(ann, dict):
+                        transcript_id = ann.get("feature_id")
+                        transcript_consequence = ann.get("effect")
+                    elif isinstance(ann, list) and ann:
+                        if isinstance(ann[0], dict):
+                            transcript_id = ann[0].get("feature_id")
+                            transcript_consequence = ann[0].get("effect")
+
             return Evidence(
                 variant_id=hit_data.get("_id", query),
                 gene=gene,
@@ -446,9 +558,17 @@ class MyVariantClient:
                 ncbi_gene_id=ncbi_gene_id,
                 dbsnp_id=dbsnp_id,
                 clinvar_id=clinvar_id,
+                clinvar_clinical_significance=clinvar_clinical_significance,
+                clinvar_accession=clinvar_accession,
                 hgvs_genomic=hgvs_genomic,
                 hgvs_protein=hgvs_protein,
                 hgvs_transcript=hgvs_transcript,
+                snpeff_effect=snpeff_effect,
+                polyphen2_prediction=polyphen2_prediction,
+                cadd_score=cadd_score,
+                gnomad_exome_af=gnomad_exome_af,
+                transcript_id=transcript_id,
+                transcript_consequence=transcript_consequence,
                 civic=civic_evidence,
                 clinvar=clinvar_evidence,
                 cosmic=cosmic_evidence,
